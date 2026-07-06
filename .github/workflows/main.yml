@@ -28,12 +28,14 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      - name: Build Android APK (release)
+      - name: 🚀 Build Release APK (Split by ABI)
         run: flutter build apk --release --split-per-abi
 
-      - name: Upload APK artifacts
+      - name: 📤 Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: TARS-Offline-APK
+          path: build/app/outputs/flutter-apk/*.apk
           name: TARS-APK
           path: build/app/outputs/flutter-apk/*.apk
       - name: 🚀 Build Release APK (Split by ABI)
