@@ -1,40 +1,41 @@
-name: Build TARS APK (Offline)
+name: Build Android APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ "main", "master" ]
-  workflow_dispatch:  # This lets you manually click "Run workflow" anytime
+    branches: [ main, master ]
+  workflow_dispatch:  # Allows you to manually trigger it
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: ☕ Setup Java (Required for Android)
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: 🦆 Setup Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.4'  # Stable version compatible with the repo
+          flutter-version: '3.22.0'  # Or your stable version
           channel: 'stable'
 
-      - name: 📦 Get Flutter Dependencies
+      - name: Get Flutter dependencies
         run: flutter pub get
 
-      - name: 🔧 Setup Android NDK (Critical for llama.cpp)
-        run: |
-          echo "y" | sdkmanager "ndk;25.1.8937393"
-          echo "ndk.dir=$ANDROID_HOME/ndk/25.1.8937393" >> local.properties
+      - name: Build Android APK (release)
+        run: flutter build apk --release --split-per-abi
 
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARS-APK
+          path: build/app/outputs/flutter-apk/*.apk
       - name: 🚀 Build Release APK (Split by ABI)
         run: flutter build apk --release --split-per-abi
 
