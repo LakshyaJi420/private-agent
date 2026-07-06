@@ -1,3 +1,7 @@
+name: private_agent
+description: A private AI assistant agent for Android.
+version: 1.0.0+1
+
 environment:
   sdk: ^3.4.0
 
@@ -5,7 +9,7 @@ dependencies:
   flutter:
     sdk: flutter
   shizuku_api: ^1.2.2
-  # ... (keep all your existing dependencies listed here)
+  # ... (keep all your other existing dependencies listed here)
 
 dev_dependencies:
   flutter_test:
