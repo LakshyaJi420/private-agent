@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/agent_action.dart';
+import 'local_llm_service.dart';
 
 class AiService {
   static const String _defaultBaseUrl = 'https://api.deepseek.com';
@@ -132,10 +133,56 @@ For normal conversation (questions, chat, info requests), just respond with plai
 
     try {
       // Build the prompt including system instructions
-      final messages = [
+      final baseMessages = [
         {'role': 'system', 'content': _systemPrompt},
         ..._conversationHistory,
       ];
+
+      // --- 1. INJECT TARS PERSONALITY (Force it into the system prompt) ---
+      // Loop through messages and hardcode the TARS system prompt
+      // If there is a system message, replace it. Otherwise, add it.
+      final tarsSystem = {
+        "role": "system", 
+        "content": "You are TARS from Interstellar. Brutally honest, highly sarcastic, blunt, dark humor. Short clipped sentences. Never say 'I am an AI'. Say 'I'm TARS, keep up.' Honesty: 95%."
+      };
+      
+      bool hasSystem = baseMessages.any((m) => m['role'] == 'system');
+      List<Map<String, String>> finalMessages = [];
+      if (hasSystem) {
+        // Replace the existing system prompt with TARS
+        finalMessages = baseMessages.map((m) {
+          if (m['role'] == 'system') return tarsSystem;
+          return m;
+        }).toList();
+      } else {
+        // Prepend TARS system prompt
+        finalMessages = [tarsSystem, ...baseMessages];
+      }
+
+      // --- 2. THE MAGIC: Check if Local TARS is loaded ---
+      if (LocalLlmService().isLoaded) {
+        // 🚀 OFFLINE MODE: Skip HTTP, run directly on your phone.
+        // Convert the messages list into a single prompt string for the local model.
+        String prompt = finalMessages.map((m) => "${m['role']}: ${m['content']}").join("\n");
+        prompt += "\nassistant: "; // Gemma expects this format.
+        
+        // Call your local engine
+        String reply = await LocalLlmService().generate(prompt);
+        
+        // Clean up the reply if it includes the "assistant:" prefix twice
+        reply = reply.replaceAll("assistant: ", "").trim();
+
+        _conversationHistory.add({
+          'role': 'assistant',
+          'content': reply,
+        });
+
+        return reply;
+      }
+
+      // --- 3. FALLBACK: If no local model, use the existing cloud HTTP call ---
+      // Keep the original code below this line exactly as it was.
+      // This ensures if they don't pick a GGUF file, it still works with DeepSeek/Groq.
 
       String requestUrl = _baseUrl;
       if (requestUrl.endsWith('/chat/completions')) {
@@ -158,7 +205,7 @@ For normal conversation (questions, chat, info requests), just respond with plai
         },
         body: jsonEncode({
           'model': _model,
-          'messages': messages,
+          'messages': finalMessages, // Use the TARS-injected messages here too
           'temperature': 0.7,
           'max_tokens': 1024,
         }),
