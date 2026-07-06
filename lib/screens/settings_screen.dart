@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/ai_service.dart';
 import '../services/shizuku_service.dart';
 import '../services/screen_automation_service.dart';
 import '../services/telegram_service.dart';
+import '../services/local_llm_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -260,6 +262,34 @@ class _SettingsScreenState extends State<SettingsScreen>
                 label: const Text('Fetch'),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          
+          ListTile(
+            title: const Text("Load Local GGUF Model (Offline TARS)"),
+            subtitle: Text(LocalLlmService().isLoaded ? "✅ Model Active" : "Tap to select .gguf file"),
+            trailing: ElevatedButton(
+              onPressed: () async {
+                // Request storage permission
+                if (await Permission.storage.request().isGranted) {
+                  FilePickerResult? result = await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['gguf'],
+                  );
+                  if (result != null) {
+                    String path = result.files.single.path!;
+                    await LocalLlmService().loadModel(path);
+                    // Show a snackbar: "TARS Brain Loaded Successfully!"
+                    if (mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('TARS Brain Loaded Successfully!')));
+                    }
+                  }
+                }
+              },
+              child: const Text("Browse"),
+            ),
           ),
           const SizedBox(height: 24),
           
